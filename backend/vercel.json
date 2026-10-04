@@ -6,5 +6,5 @@
       "excludeFiles": "{.venv/**,data/chroma/**,app/tests/**,**/__pycache__/**}"
     }
   },
-  "rewrites": [{ "source": "/(.*)", "destination": "/api/index" }]
+  "rewrites": [{ "source": "/(.*)", "destination": "/api/index?__path=/$1" }]
 }

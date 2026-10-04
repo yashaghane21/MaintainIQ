@@ -58,6 +58,7 @@ The user started deploying the **backend** to Vercel. The first build failed: `c
 - added serverless mode, detected from `VERCEL=1`: uploads are ingested within the request and no background startup thread runs;
 - made embeddings `auto` with an embedder-specific minimum score. Hashing scores run lower, and a fixed 0.25 cut-off dropped relevant chunks; this was found while testing;
 - replaced the legacy `builds` block in `backend/vercel.json` with `functions` + `rewrites`, and added `.vercelignore`.
+- after the first successful Vercel build, every URL returned FastAPI's `{"detail":"Not Found"}`. The `x-request-id` header showed the requests reached the app, but with the rewritten path `/api/index`. Fix: the rewrite now forwards the original path (`/api/index?__path=/$1`), and `api/index.py` wraps the app in a small ASGI middleware that restores it. This is covered by `test_vercel_entry.py`.
 
 ## Code review approach
 
@@ -70,7 +71,7 @@ The user started deploying the **backend** to Vercel. The first build failed: `c
 
 | Command | Result |
 |---|---|
-| `python -m pytest` (backend, Python 3.14.6) | **107 passed**: 20 threshold, 16 AI service, 15 retrieval, 22 issue API, 24 work orders, 10 knowledge API. Retrieval-dependent tests run against both ChromaDB and the in-memory store. (Before the serverless change: 71 passed.) |
+| `python -m pytest` (backend, Python 3.14.6) | **111 passed**: 20 threshold, 16 AI service, 15 retrieval, 22 issue API, 24 work orders, 10 knowledge API, 4 Vercel entry point. Retrieval-dependent tests run against both ChromaDB and the in-memory store. (Before the serverless change: 71 passed.) |
 | `npm test` (Vitest 4) | **16 passed** across 3 files |
 | `npm run build` (Vite 8) | Succeeded; route-level code splitting |
 | `npx oxlint src` | 0 errors (only fast-refresh warnings for files that export helpers alongside components) |

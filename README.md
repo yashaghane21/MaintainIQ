@@ -304,7 +304,7 @@ cd backend && python -m pytest
 cd frontend && npm test
 ```
 
-Tests that use retrieval are parametrised over both vector stores, so they run twice (107 backend tests in total).
+Tests that use retrieval are parametrised over both vector stores, so they run twice (111 backend tests in total).
 
 | Suite | Count | Covers |
 |---|---|---|
@@ -363,7 +363,7 @@ Create **two Vercel projects** from the same GitHub repository: one for the API 
 ### 2. Backend on Vercel (serverless Python)
 
 1. **New Project** → import the repo → **Root Directory: `backend`**. Leave the framework preset as *Other*.
-2. Vercel installs `backend/requirements.txt` (flat, ~70 MB) and serves `api/index.py`. `vercel.json` routes every path to it and allows 60 s per request.
+2. Vercel installs `backend/requirements.txt` (flat, ~70 MB) and serves `api/index.py`. `vercel.json` rewrites every path to that function as `/api/index?__path=/<path>`, and `api/index.py` restores the original path before FastAPI routes it. Requests may take up to 60 s.
 3. Environment variables:
 
    | Variable | Value |
