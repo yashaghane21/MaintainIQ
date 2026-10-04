@@ -1,5 +1,7 @@
 """Knowledge base documents: upload, ingestion status, listing and re-indexing."""
 
+import threading
+
 from pymongo.database import Database
 
 from app.core.errors import NotFoundError, UploadError
@@ -100,3 +102,34 @@ def reindex_missing(db: Database, retrieval: RetrievalService) -> int:
     if rebuilt:
         logger.info("Re-indexed documents", extra={"event": f"reindexed {rebuilt}"})
     return rebuilt
+
+
+_warm_lock = threading.Lock()
+
+
+def ensure_index_loaded(db: Database, retrieval: RetrievalService) -> None:
+    """Rebuild the in-memory vector index from MongoDB once per process.
+
+    Serverless instances start with an empty in-memory store; this re-embeds
+    every completed document from its stored text. It does not touch ingestion
+    status in MongoDB. A no-op for ChromaDB, which persists its own index.
+    """
+    if retrieval.warmed:
+        return
+    with _warm_lock:
+        if retrieval.warmed:
+            return
+        count = 0
+        for meta in db[Collections.KNOWLEDGE_DOCUMENTS].find({"ingestion_status": IngestionStatus.COMPLETED.value}):
+            text = db[Collections.KNOWLEDGE_TEXTS].find_one({"document_id": meta["document_id"]})
+            if not text:
+                continue
+            try:
+                count += retrieval.ingest(
+                    document_id=meta["document_id"], title=meta["title"], equipment_type=meta["equipment_type"],
+                    source=meta["source"], pages=[Page(p["page_number"], p["text"]) for p in text["pages"]],
+                )
+            except Exception:  # noqa: BLE001 - one bad document must not block retrieval
+                logger.exception("Failed to load document into index", extra={"document_id": meta["document_id"]})
+        retrieval.warmed = True
+        logger.info("In-memory vector index loaded", extra={"event": f"loaded {count} chunks"})

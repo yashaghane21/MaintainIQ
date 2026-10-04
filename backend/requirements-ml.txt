@@ -1,0 +1,7 @@
+# Full semantic retrieval: ChromaDB + Sentence Transformers on CPU torch (~1.5 GB installed).
+# Use for local development or a long-running host with >= 2 GB RAM.
+--extra-index-url https://download.pytorch.org/whl/cpu
+-r requirements.txt
+chromadb==1.5.9
+torch==2.14.1+cpu
+sentence-transformers==6.1.0

@@ -74,7 +74,7 @@ export default function Settings() {
                   {health.data.ai.is_simulated && <Badge tone="amber">simulated</Badge>}
                 </StatusRow>
                 <StatusRow label="Retrieval" ok={health.data.retrieval.status === 'ok'}>
-                  {health.data.retrieval.embedder}{health.data.retrieval.indexed_chunks != null && ` · ${health.data.retrieval.indexed_chunks} chunks`}
+                  {health.data.retrieval.embedder} · {health.data.retrieval.vector_store}{health.data.retrieval.indexed_chunks != null && ` · ${health.data.retrieval.indexed_chunks} chunks loaded`}
                 </StatusRow>
               </>
             )}

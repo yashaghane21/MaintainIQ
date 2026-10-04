@@ -47,7 +47,17 @@ Effectively all implementation: backend services and API, frontend components an
 Rejected or avoided approaches:
 - **Automatic fallback from Gemini to the demo provider on failure.** Rejected because it would hide a live-AI failure behind simulated output.
 - **Treating missing sensor values as 0, or letting the LLM compute thresholds.** Rejected per the spec. Rules are pure Python.
-- **Shipping torch on Render's free tier.** Rejected because 512 MB is not enough. The blueprint uses `requirements-lite.txt` with explicitly reported hashing embeddings instead.
+- **Shipping torch/ChromaDB to small or serverless hosts.** Rejected: torch does not fit Render's free 512 MB, and even the ChromaDB-only dependency tree is about 400 MB installed, too large for a Vercel function. Those hosts get the flat `requirements.txt` (about 70 MB) instead, and the app reports the lexical fallback explicitly.
+
+### Deployment target changed to Vercel serverless
+
+The user started deploying the **backend** to Vercel. The first build failed: `could not parse requirements.txt` (Vercel's parser does not support the `-r` include). Measuring the installed dependency tree also showed that ChromaDB alone pulls in about 400 MB (kubernetes, onnxruntime, numpy), which a Vercel function cannot hold. The user chose to keep the backend on Vercel (Render was offered as the lower-effort alternative), so the agent:
+
+- split dependencies into a flat `requirements.txt` (about 70 MB, measured), `requirements-ml.txt` (ChromaDB + Sentence Transformers) and `requirements-dev.txt`;
+- added a dependency-free in-memory vector store that implements the subset of the Chroma API the service uses. It is selected automatically when ChromaDB is not installed and rebuilt from MongoDB text once per process;
+- added serverless mode, detected from `VERCEL=1`: uploads are ingested within the request and no background startup thread runs;
+- made embeddings `auto` with an embedder-specific minimum score. Hashing scores run lower, and a fixed 0.25 cut-off dropped relevant chunks; this was found while testing;
+- replaced the legacy `builds` block in `backend/vercel.json` with `functions` + `rewrites`, and added `.vercelignore`.
 
 ## Code review approach
 
@@ -60,7 +70,7 @@ Rejected or avoided approaches:
 
 | Command | Result |
 |---|---|
-| `python -m pytest` (backend, Python 3.14.6) | **71 passed** (20 threshold, 16 AI service, 9 retrieval, 11 issue API, 12 work orders, 3 knowledge API) |
+| `python -m pytest` (backend, Python 3.14.6) | **107 passed**: 20 threshold, 16 AI service, 15 retrieval, 22 issue API, 24 work orders, 10 knowledge API. Retrieval-dependent tests run against both ChromaDB and the in-memory store. (Before the serverless change: 71 passed.) |
 | `npm test` (Vitest 4) | **16 passed** across 3 files |
 | `npm run build` (Vite 8) | Succeeded; route-level code splitting |
 | `npx oxlint src` | 0 errors (only fast-refresh warnings for files that export helpers alongside components) |
@@ -80,9 +90,17 @@ Against a real local MongoDB 8.0.12, real Sentence Transformers embeddings (`all
 
 After the user created `backend/.env` with their Atlas connection string, the API connected to Atlas (`/api/health` → database `ok`). `python -m app.seed --reset` seeded the `maintainiq` database on Atlas, and the full Playwright UI workflow (report → analyse → edit → approve) passed against Atlas with no console errors.
 
+### Serverless build (simulated locally)
+
+A fresh virtualenv with **only** `requirements.txt` (no ChromaDB, torch or mongomock) ran `api/index.py` with `VERCEL=1` against Atlas:
+- `/api/health` reported the in-memory store with 0 chunks on a cold start. The first search rebuilt 16 chunks from Atlas.
+- A PDF upload returned `ingestion_status: completed` in the same response.
+- The full Playwright workflow passed with no console errors. The analysis cited 4 manual excerpts using hashing retrieval.
+
 ## Not verified
 
 - **No real Gemini API call was made** (no key available). The live provider is covered only by mocked-client unit tests.
 - **No hosted deployment** to Vercel, Render or Atlas was performed. The configs were written but not exercised.
-- The Render blueprint pins Python 3.12.7; the code was only executed on Python 3.14.6.
+- **No deployment to Vercel's hosted infrastructure was verified.** Serverless mode was simulated locally with `VERCEL=1` and uvicorn, not Vercel's runtime.
+- Vercel and Render run Python 3.12 by default; the code was only executed on Python 3.14.6.
 - No load, security penetration or accessibility-audit tooling was run beyond semantic markup, labels and keyboard-accessible dialogs.

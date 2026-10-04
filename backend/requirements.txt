@@ -1,5 +1,11 @@
-# Full backend including semantic embeddings (Sentence Transformers on CPU torch).
---extra-index-url https://download.pytorch.org/whl/cpu
--r requirements-lite.txt
-torch==2.14.1+cpu
-sentence-transformers==6.1.0
+# Core API dependencies (~70 MB installed). This flat file is what Vercel and Render install.
+# Without ChromaDB / Sentence Transformers the app automatically uses the in-memory
+# vector store and hashing embeddings (reported by /api/health).
+fastapi==0.142.2
+uvicorn[standard]==0.54.0
+pydantic==2.13.5
+pydantic-settings==2.15.0
+pymongo==4.18.2
+python-multipart==0.0.32
+pypdf==6.19.0
+google-genai==2.28.0

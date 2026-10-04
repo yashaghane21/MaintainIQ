@@ -27,6 +27,7 @@ class SentenceTransformerEmbedder:
     def __init__(self, model_name: str):
         self.model_name = model_name
         self.name = f"sentence-transformers:{model_name}"
+        self.default_min_score = 0.25
         self._model = None
         self._lock = threading.Lock()
 
@@ -52,6 +53,7 @@ class HashingEmbedder:
     """
 
     name = "hashing (lexical fallback, non-semantic)"
+    default_min_score = 0.10
 
     def __init__(self, dim: int = 384):
         self.dim = dim
@@ -68,8 +70,17 @@ class HashingEmbedder:
         return out
 
 
+def _installed(module: str) -> bool:
+    import importlib.util
+
+    return importlib.util.find_spec(module) is not None
+
+
 def build_embedder(settings: Settings):
-    if settings.embedding_provider == "hashing":
+    provider = settings.embedding_provider
+    if provider == "auto":
+        provider = "sentence-transformers" if _installed("sentence_transformers") else "hashing"
+    if provider == "hashing":
         return HashingEmbedder()
     return SentenceTransformerEmbedder(settings.embedding_model)
 
@@ -102,13 +113,22 @@ class RetrievalService:
         self._client = chroma_client
         self._collection = None
         self._lock = threading.Lock()
-        self.init_error: str | None = None
+        store = self.settings.vector_store
+        if store == "auto":
+            store = "chroma" if (chroma_client is not None or _installed("chromadb")) else "memory"
+        self.store_kind = store
+        # True once the in-process index has been (re)built for this process.
+        self.warmed = store == "chroma"
 
     # -- storage -------------------------------------------------------------
     def _get_collection(self):
         if self._collection is not None:
             return self._collection
         with self._lock:
+            if self._collection is None and self.store_kind == "memory":
+                from app.services.vector_store import InMemoryCollection
+
+                self._collection = InMemoryCollection()
             if self._collection is None:
                 import chromadb
 
@@ -125,9 +145,13 @@ class RetrievalService:
     def status(self) -> dict:
         try:
             count = self._get_collection().count()
-            return {"status": "ok", "embedder": self.embedder.name, "indexed_chunks": count}
+            return {"status": "ok", "embedder": self.embedder.name, "vector_store": self.store_label, "indexed_chunks": count}
         except Exception as exc:  # noqa: BLE001 - surfaced in health check
-            return {"status": "error", "embedder": self.embedder.name, "error": type(exc).__name__}
+            return {"status": "error", "embedder": self.embedder.name, "vector_store": self.store_label, "error": type(exc).__name__}
+
+    @property
+    def store_label(self) -> str:
+        return "chromadb" if self.store_kind == "chroma" else "in-memory (rebuilt from MongoDB per instance)"
 
     def chunk_count(self, document_id: str) -> int:
         result = self._get_collection().get(where={"document_id": document_id}, include=[])
@@ -183,10 +207,13 @@ class RetrievalService:
             logger.exception("Retrieval failed", extra={"retrieval_status": "error"})
             return RetrievalResult("error", message=f"Retrieval failed: {type(exc).__name__}")
 
+        min_score = self.settings.retrieval_min_score
+        if min_score is None:
+            min_score = self.embedder.default_min_score
         chunks = []
         for cid, doc, meta, dist in zip(res["ids"][0], res["documents"][0], res["metadatas"][0], res["distances"][0]):
             score = round(1.0 - float(dist), 4)   # cosine distance -> similarity
-            if score < self.settings.retrieval_min_score:
+            if score < min_score:
                 continue
             chunks.append(RetrievedChunk(
                 chunk_id=cid, document_id=meta["document_id"], document_title=meta["document_title"],

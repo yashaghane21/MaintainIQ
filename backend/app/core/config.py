@@ -1,5 +1,6 @@
 """Application configuration loaded from environment variables (and an optional .env file)."""
 
+import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
@@ -39,15 +40,20 @@ class Settings(BaseSettings):
     gemini_temperature: float = 0.2
 
     # --- Retrieval / RAG -------------------------------------------------------
-    # "sentence-transformers" -> real semantic embeddings (default)
-    # "hashing" -> lightweight lexical hashing embeddings for tests / low-memory hosts
-    embedding_provider: Literal["sentence-transformers", "hashing"] = "sentence-transformers"
+    # "auto" -> sentence-transformers if installed, otherwise hashing (reported by /api/health)
+    # "sentence-transformers" -> real semantic embeddings
+    # "hashing" -> lightweight lexical hashing embeddings for tests / low-memory / serverless hosts
+    embedding_provider: Literal["auto", "sentence-transformers", "hashing"] = "auto"
     embedding_model: str = "sentence-transformers/all-MiniLM-L6-v2"
+    # "auto" -> ChromaDB if installed, otherwise the in-memory store (rebuilt from MongoDB on cold start)
+    vector_store: Literal["auto", "chroma", "memory"] = "auto"
     chroma_mode: Literal["persistent", "ephemeral"] = "persistent"
     chroma_persist_dir: str = str(BACKEND_ROOT / "data" / "chroma")
     chroma_collection: str = "maintenance_manuals"
     retrieval_top_k: int = 4
-    retrieval_min_score: float = 0.25
+    # Minimum cosine similarity for a chunk to count as evidence. Unset -> embedder default
+    # (0.25 for sentence-transformers, 0.10 for lexical hashing, whose scores run lower).
+    retrieval_min_score: float | None = None
     chunk_size: int = 900
     chunk_overlap: int = 150
     upload_max_bytes: int = 10 * 1024 * 1024
@@ -58,6 +64,9 @@ class Settings(BaseSettings):
     conflict_tolerance_ratio: float = 0.10
 
     # --- Misc -------------------------------------------------------------------
+    # Serverless (e.g. Vercel, which sets VERCEL=1): no background threads/tasks, so
+    # document ingestion runs inside the upload request and startup tasks are skipped.
+    serverless: bool = Field(default_factory=lambda: bool(os.environ.get("VERCEL")))
     seed_on_startup: bool = False
     reindex_on_startup: bool = True
 

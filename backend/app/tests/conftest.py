@@ -42,10 +42,12 @@ def db(db_manager):
     return db_manager.get_db()
 
 
-@pytest.fixture
-def retrieval():
+@pytest.fixture(params=["chroma", "memory"])
+def retrieval(request):
+    """Every retrieval-dependent test runs against both vector stores."""
     # Unique collection per test so the shared in-process Chroma system stays isolated.
-    settings = get_settings().model_copy(update={"chroma_collection": f"t_{uuid.uuid4().hex[:12]}", "retrieval_min_score": 0.05})
+    settings = get_settings().model_copy(update={"chroma_collection": f"t_{uuid.uuid4().hex[:12]}", "retrieval_min_score": 0.05,
+                                                 "vector_store": request.param})
     service = RetrievalService(settings, embedder=HashingEmbedder())
     set_retrieval_service(service)
     yield service

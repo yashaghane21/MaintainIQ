@@ -126,7 +126,7 @@ sequenceDiagram
 | AI / RAG | Google Gemini via `google-genai`, Sentence Transformers (`all-MiniLM-L6-v2`), ChromaDB, pypdf |
 | Database | MongoDB Atlas (verified against a live Atlas cluster and a local MongoDB 8.0.12) |
 | Testing | Pytest (+ mongomock, FastAPI TestClient), Vitest, React Testing Library |
-| Deployment | Vercel (frontend), Render (backend), MongoDB Atlas |
+| Deployment | Vercel (frontend), Vercel serverless Python (backend; Render blueprint also provided), MongoDB Atlas |
 
 ---
 
@@ -156,10 +156,12 @@ maintainiq/
 │   ├── data/
 │   │   ├── threshold_profiles.json # FICTIONAL demo thresholds
 │   │   └── manuals/                # FICTIONAL sample manuals
-│   ├── requirements.txt            # full (incl. torch CPU + sentence-transformers)
-│   ├── requirements-lite.txt       # no ML model (hashing embeddings) for small hosts
-│   ├── requirements-dev.txt
-│   ├── render.yaml
+│   ├── api/index.py                # Vercel serverless entry point (imports app.main:app)
+│   ├── requirements.txt            # flat core deps (~70 MB) - installed by Vercel/Render
+│   ├── requirements-ml.txt         # + ChromaDB, CPU torch, Sentence Transformers (semantic retrieval)
+│   ├── requirements-dev.txt        # + pytest, httpx, mongomock
+│   ├── vercel.json, .vercelignore  # backend deployment on Vercel
+│   ├── render.yaml                 # alternative: Render blueprint
 │   └── .env.example
 ├── frontend/
 │   ├── src/
@@ -195,7 +197,7 @@ maintainiq/
 cd backend
 python -m venv .venv
 # Windows: .venv\Scripts\activate    macOS/Linux: source .venv/bin/activate
-pip install -r requirements-dev.txt        # includes CPU torch (~200 MB download)
+pip install -r requirements-dev.txt        # full stack incl. ChromaDB + CPU torch (~200 MB download)
 cp .env.example .env                       # then edit MONGODB_URI etc.
 python -m app.seed --reset                 # equipment, fictional manuals, sample scenarios
 uvicorn app.main:app --reload --port 8000
@@ -230,9 +232,11 @@ npm run dev                   # http://localhost:5173
 
 The key is only read by the backend. The frontend has no access to it.
 
-### ChromaDB setup
+### ChromaDB / vector store setup
 
-There's nothing to install separately. ChromaDB runs embedded in the API process. Vectors are stored in `CHROMA_PERSIST_DIR` (default `backend/data/chroma`). If that directory is lost, the API rebuilds it from the document text stored in MongoDB at startup (`REINDEX_ON_STARTUP=true`).
+There's nothing to install separately. With `requirements-ml.txt` installed, ChromaDB runs embedded in the API process and stores vectors in `CHROMA_PERSIST_DIR` (default `backend/data/chroma`). If that directory is lost, the API rebuilds it from the document text stored in MongoDB at startup (`REINDEX_ON_STARTUP=true`).
+
+If ChromaDB is **not** installed (e.g. on Vercel), `VECTOR_STORE=auto` switches to a dependency-free **in-memory vector store**. Each process (each serverless instance) rebuilds it from the document text stored in MongoDB the first time retrieval is needed. Likewise, `EMBEDDING_PROVIDER=auto` uses Sentence Transformers when installed and otherwise falls back to lexical hashing embeddings. `/api/health` and the Settings page always report which store and embedder are active.
 
 ---
 
@@ -248,12 +252,14 @@ There's nothing to install separately. ChromaDB runs embedded in the API process
 | `CORS_ORIGINS` | `http://localhost:5173,...` | Comma-separated allowed origins |
 | `AI_PROVIDER` | `demo` | `gemini` or `demo` |
 | `GEMINI_API_KEY` / `GEMINI_MODEL` | — / `gemini-2.5-flash` | Live AI |
-| `EMBEDDING_PROVIDER` | `sentence-transformers` | `hashing` = lexical fallback for low-memory hosts |
-| `CHROMA_MODE` / `CHROMA_PERSIST_DIR` | `persistent` / `./data/chroma` | Vector store |
-| `RETRIEVAL_TOP_K` / `RETRIEVAL_MIN_SCORE` | `4` / `0.25` | Retrieval tuning |
+| `EMBEDDING_PROVIDER` | `auto` | `sentence-transformers` if installed, else `hashing` (lexical fallback) |
+| `VECTOR_STORE` | `auto` | `chroma` if installed, else `memory` (rebuilt from MongoDB per process) |
+| `CHROMA_MODE` / `CHROMA_PERSIST_DIR` | `persistent` / `./data/chroma` | ChromaDB settings |
+| `RETRIEVAL_TOP_K` / `RETRIEVAL_MIN_SCORE` | `4` / embedder default | Min score defaults to 0.25 (semantic) or 0.10 (hashing) |
 | `STALE_READING_MINUTES` | `120` | Age after which a reading is flagged stale |
 | `THRESHOLD_PROFILES_PATH` | `data/threshold_profiles.json` | Rule configuration |
-| `SEED_ON_STARTUP` / `REINDEX_ON_STARTUP` | `false` / `true` | Startup tasks (run in a background thread) |
+| `SEED_ON_STARTUP` / `REINDEX_ON_STARTUP` | `false` / `true` | Startup tasks (background thread; skipped when serverless) |
+| `SERVERLESS` | auto (`VERCEL` env) | Ingest uploads inside the request; no background threads |
 
 ### Frontend (`frontend/.env`)
 
@@ -291,21 +297,23 @@ The thresholds in `data/threshold_profiles.json` are **fictional demonstration v
 ## Testing
 
 ```bash
-# Backend: uses mongomock, hashing embeddings and an in-memory Chroma; no network calls
+# Backend: mongomock + hashing embeddings; retrieval tests run on BOTH ChromaDB and the in-memory store; no network calls
 cd backend && python -m pytest
 
 # Frontend
 cd frontend && npm test
 ```
 
+Tests that use retrieval are parametrised over both vector stores, so they run twice (107 backend tests in total).
+
 | Suite | Count | Covers |
 |---|---|---|
 | `test_threshold_service.py` | 20 | normal, warning, critical, boundary, missing (never zero), invalid (NaN/∞/implausible/future), unit conversion, unsupported unit, stale, conflicting readings, no-rule sensors |
 | `test_ai_service.py` | 16 | schema validation (enums, missing/extra fields, non-JSON), fabricated-evidence removal, unverified labelling, priority floor, Gemini provider with a mocked client (success, repair, double failure, network error, missing key) |
-| `test_retrieval.py` | 9 | empty KB, metadata/page preservation, equipment filter, min-score filtering, retrieval errors reported (not raised), idempotent re-ingest, chunking, extraction errors |
-| `test_api_issues.py` | 11 | persistence, validation (422), missing equipment (404), analysis + evidence integrity, empty retrieval, AI failure preserves the issue and allows retry, history filters, dashboard metrics, DB unavailable (503), equipment CRUD/history |
-| `test_work_orders.py` | 12 | editing + audit, explicit confirmation required, approval, rejection with reason, invalid transitions (409), edit after decision blocked, re-analysis supersedes drafts, re-analysis blocked after approval |
-| `test_knowledge_api.py` | 3 | upload → ingestion → chunks → search; bad file rejection; empty-KB search |
+| `test_retrieval.py` | 15 | empty KB, metadata/page preservation, equipment filter, min-score filtering, retrieval errors reported (not raised), idempotent re-ingest, chunking, extraction errors |
+| `test_api_issues.py` | 22 | persistence, validation (422), missing equipment (404), analysis + evidence integrity, empty retrieval, AI failure preserves the issue and allows retry, history filters, dashboard metrics, DB unavailable (503), equipment CRUD/history |
+| `test_work_orders.py` | 24 | editing + audit, explicit confirmation required, approval, rejection with reason, invalid transitions (409), edit after decision blocked, re-analysis supersedes drafts, re-analysis blocked after approval |
+| `test_knowledge_api.py` | 10 | upload → ingestion → chunks → search; bad file rejection; empty-KB search; serverless cold-start rebuild of the in-memory index; synchronous ingestion in serverless mode |
 | Frontend (Vitest + RTL) | 16 | issue form validation, blank sensors not sent as zero, loading state, error + retry with preserved input, work order editing and validation, approval/rejection confirmation dialogs, page-level API failure states |
 
 ---
@@ -342,35 +350,44 @@ Interactive OpenAPI docs are at `/docs` (development). Errors share one shape:
 
 ## Deployment
 
-> **Status:** deployment configuration is prepared but has **not** been deployed or verified on a hosted environment. No hosting credentials were available while building this.
+> **Status:** the configuration below was prepared, and the serverless build was verified **locally**: slim dependencies only, `VERCEL=1`, against MongoDB Atlas, full browser workflow. It has **not** been verified on Vercel's hosted infrastructure.
+
+Create **two Vercel projects** from the same GitHub repository: one for the API (`backend/`) and one for the UI (`frontend/`).
 
 ### 1. MongoDB Atlas
 
-1. Create a cluster and database user; under *Network Access* allow Render's outbound IPs (or `0.0.0.0/0` for a demo).
-2. Copy the connection string.
+1. Create a cluster and a database user with a strong password.
+2. Under *Network Access* allow `0.0.0.0/0`, because Vercel functions do not have fixed outbound IPs.
+3. Seed once from your machine: put the connection string in `backend/.env` and run `python -m app.seed --reset`.
 
-### 2. Backend on Render
+### 2. Backend on Vercel (serverless Python)
 
-1. Push the repository to GitHub.
-2. In Render, choose **New → Blueprint** and select the repo. `backend/render.yaml` defines the service:
-   - Build: `pip install -r requirements-lite.txt`
-   - Start: `uvicorn app.main:app --host 0.0.0.0 --port $PORT`
-   - Health check: `/api/health`
-3. Set the secret env vars in the dashboard: `MONGODB_URI`, `CORS_ORIGINS` (your Vercel URL, e.g. `https://maintainiq.vercel.app`), and optionally `GEMINI_API_KEY` with `AI_PROVIDER=gemini`.
-4. `SEED_ON_STARTUP=true` seeds an empty database on first boot.
+1. **New Project** → import the repo → **Root Directory: `backend`**. Leave the framework preset as *Other*.
+2. Vercel installs `backend/requirements.txt` (flat, ~70 MB) and serves `api/index.py`. `vercel.json` routes every path to it and allows 60 s per request.
+3. Environment variables:
 
-**Memory note:** Render's free instance (512 MB) cannot hold torch + Sentence Transformers, so the blueprint uses `requirements-lite.txt` with `EMBEDDING_PROVIDER=hashing` (lexical, non-semantic; `/api/health` reports this). For semantic retrieval in production, use an instance with at least 2 GB of RAM, set the build command to `pip install -r requirements.txt` and set `EMBEDDING_PROVIDER=sentence-transformers`.
+   | Variable | Value |
+   |---|---|
+   | `MONGODB_URI` | your Atlas connection string |
+   | `MONGODB_DB` | `maintainiq` |
+   | `CORS_ORIGINS` | the frontend URL, e.g. `https://maintainiq.vercel.app` |
+   | `APP_ENV` | `production` (hides `/docs`) |
+   | `AI_PROVIDER` / `GEMINI_API_KEY` | `demo`, or `gemini` plus a key |
 
-The blueprint pins `PYTHON_VERSION=3.12.7`. The pinned packages support 3.12, but the app was only executed locally on Python 3.14.
+   `SERVERLESS`, `VECTOR_STORE` and `EMBEDDING_PROVIDER` need no setting. Vercel sets `VERCEL=1`, and without ChromaDB/torch the app picks the in-memory store and hashing embeddings automatically.
+4. Deploy, then open `https://<api-project>.vercel.app/api/health`. Expect `database.status: "ok"` and `retrieval.vector_store: "in-memory (rebuilt from MongoDB per instance)"`.
+
+**How serverless mode differs:** uploads are chunked and embedded inside the upload request, so their status is already `completed` in the response. The vector index is rebuilt from MongoDB on each cold start (milliseconds for the sample manuals). Retrieval is lexical (hashing), not semantic. Full semantic retrieval needs a long-running host with at least 2 GB of RAM (see the Render alternative).
 
 ### 3. Frontend on Vercel
 
-1. **New Project** → import the repo → set **Root Directory** to `frontend`.
-2. The framework preset is Vite (build `npm run build`, output `dist`). `vercel.json` adds the SPA rewrite.
-3. Set the env var `VITE_API_URL=https://<your-render-service>.onrender.com`.
-4. Deploy, then add the Vercel URL to `CORS_ORIGINS` on Render.
+1. **New Project** → same repo → **Root Directory: `frontend`**. The framework preset is Vite; `frontend/vercel.json` adds the SPA rewrite.
+2. Environment variable: `VITE_API_URL=https://<api-project>.vercel.app` (no trailing slash).
+3. Deploy. Make sure the frontend URL is in the backend's `CORS_ORIGINS`, and redeploy the backend if you changed it.
 
----
+### Alternative: backend on Render
+
+`backend/render.yaml` is a Render Blueprint (`pip install -r requirements.txt`, start `uvicorn app.main:app --host 0.0.0.0 --port $PORT`, health check `/api/health`). On an instance with at least 2 GB of RAM, change the build command to `pip install -r requirements-ml.txt` for ChromaDB and Sentence Transformers.
 
 ## Limitations
 
@@ -378,6 +395,7 @@ The blueprint pins `PYTHON_VERSION=3.12.7`. The pinned packages support 3.12, bu
 - **Live Gemini path not verified against the real API.** The Gemini provider is covered by unit tests with a mocked client, and the "no key configured" failure path was verified live. No real Gemini call was made during development because no API key was available.
 - **Demo provider is keyword-based.** It shows the workflow and contracts, not diagnostic quality.
 - **Fictional data.** Thresholds and manuals are illustrative and must not be used on real equipment.
+- **Serverless retrieval is lexical.** On Vercel (no ChromaDB/torch) retrieval uses hashing embeddings, which match shared words rather than meaning. The in-memory index is rebuilt per instance, which only suits small corpora.
 - **Retrieval quality.** Chunking is paragraph-based without section awareness or reranking. Scanned PDFs (no text layer) are rejected. Retrieval scores are cosine similarities, not probabilities.
 - **Single-process background ingestion.** Ingestion uses FastAPI background tasks, not a job queue. A restart during ingestion leaves a `processing` status, which is retried by `REINDEX_ON_STARTUP`.
 - **Embedded ChromaDB** is suited to a single API instance. Horizontal scaling would need a Chroma server or Atlas Vector Search.

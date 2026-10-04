@@ -6,7 +6,7 @@ services:
     runtime: python
     rootDir: backend
     plan: free
-    buildCommand: pip install -r requirements-lite.txt
+    buildCommand: pip install -r requirements.txt
     startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
     healthCheckPath: /api/health
     envVars:
@@ -29,12 +29,13 @@ services:
       - key: GEMINI_MODEL
         value: gemini-2.5-flash
       # The free plan has 512 MB RAM, which is not enough for torch + Sentence Transformers.
-      # On a paid plan (>= 2 GB) use: buildCommand "pip install -r requirements.txt" and
-      # EMBEDDING_PROVIDER=sentence-transformers.
+      # requirements.txt has no ChromaDB/ML packages, so the app uses the in-memory vector
+      # store + hashing embeddings, rebuilt from MongoDB on startup. On a plan with >= 2 GB,
+      # use buildCommand "pip install -r requirements-ml.txt" for semantic retrieval.
       - key: EMBEDDING_PROVIDER
-        value: hashing
-      - key: CHROMA_PERSIST_DIR
-        value: /tmp/chroma     # ephemeral; vectors are rebuilt from MongoDB on startup
+        value: auto
+      - key: VECTOR_STORE
+        value: auto
       - key: SEED_ON_STARTUP
         value: "true"
       - key: REINDEX_ON_STARTUP

@@ -21,6 +21,7 @@ from app.services import work_order_service
 from app.services.ai_service import apply_guardrails, get_ai_provider
 from app.services.equipment_service import get_equipment
 from app.services.issue_service import get_issue, status_entry
+from app.services.knowledge_service import ensure_index_loaded
 from app.services.retrieval_service import RetrievalResult, RetrievalService
 
 logger = get_logger(__name__)
@@ -89,6 +90,7 @@ def analyze_issue(db: Database, issue_id: str, retrieval_service: RetrievalServi
     started = time.perf_counter()
 
     query = build_retrieval_query(issue, equipment)
+    ensure_index_loaded(db, retrieval_service)
     retrieval = retrieval_service.retrieve(query, equipment_type=equipment["equipment_type"])
     logger.info("Retrieval finished", extra={"issue_id": issue_id, "retrieval_status": retrieval.status})
 

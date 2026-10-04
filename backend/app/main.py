@@ -19,7 +19,7 @@ logger = get_logger("app")
 
 def _background_startup():
     """Seeding / re-indexing can take a while (model download), so it must not block the health check."""
-    from app.services.knowledge_service import reindex_missing
+    from app.services.knowledge_service import ensure_index_loaded, reindex_missing
     from app.services.retrieval_service import get_retrieval_service
 
     manager = get_db_manager()
@@ -29,7 +29,11 @@ def _background_startup():
             from app.seed import seed_if_empty
             seed_if_empty(db)
         if settings.reindex_on_startup:
-            reindex_missing(db, get_retrieval_service())
+            retrieval = get_retrieval_service()
+            if retrieval.store_kind == "chroma":
+                reindex_missing(db, retrieval)
+            else:
+                ensure_index_loaded(db, retrieval)
     except Exception:  # noqa: BLE001 - logged; the API stays up and reports status via /api/health
         logger.exception("Background startup task failed")
 
@@ -38,7 +42,9 @@ def _background_startup():
 async def lifespan(app: FastAPI):
     logger.info("Starting MaintainIQ API", extra={"event": "startup", "ai_provider": settings.ai_provider})
     get_db_manager().connect()
-    if settings.app_env != "test":
+    # Serverless platforms freeze the process between requests, so no background thread there;
+    # the database connects lazily and the vector index loads on first retrieval.
+    if settings.app_env != "test" and not settings.serverless:
         threading.Thread(target=_background_startup, daemon=True).start()
     yield
     get_db_manager().close()
