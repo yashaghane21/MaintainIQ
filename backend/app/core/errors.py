@@ -3,6 +3,7 @@
 from fastapi import FastAPI, Request
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 from app.core.logging import get_logger, request_id_ctx
 
@@ -69,6 +70,18 @@ def register_exception_handlers(app: FastAPI) -> None:
             for err in exc.errors()
         ]
         return JSONResponse(status_code=422, content=_error_body("validation_error", "Request validation failed", details))
+
+    @app.exception_handler(StarletteHTTPException)
+    async def _http_error(request: Request, exc: StarletteHTTPException):
+        # Routing 404s and other framework HTTP errors use the same error shape. For 404s the
+        # received path is echoed, which makes proxy/rewrite misconfiguration easy to diagnose.
+        details = None
+        if exc.status_code == 404:
+            details = {"path": request.scope.get("path"), "root_path": request.scope.get("root_path", "")}
+        code = {404: "not_found", 405: "method_not_allowed"}.get(exc.status_code, "http_error")
+        message = "No route matches this URL" if exc.status_code == 404 else str(exc.detail)
+        return JSONResponse(status_code=exc.status_code, content=_error_body(code, message, details),
+                            headers=getattr(exc, "headers", None))
 
     @app.exception_handler(Exception)
     async def _unhandled(request: Request, exc: Exception):

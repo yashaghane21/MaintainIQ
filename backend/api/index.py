@@ -30,6 +30,9 @@ class RestoreOriginalPath:
                     "path": path,
                     "raw_path": quote(path).encode("latin-1"),
                     "query_string": urlencode(rest).encode("latin-1"),
+                    # Starlette strips root_path from path before routing; a runtime-set
+                    # root_path (e.g. the function path) would otherwise break matching.
+                    "root_path": "",
                 }
         await self.inner(scope, receive, send)
 
