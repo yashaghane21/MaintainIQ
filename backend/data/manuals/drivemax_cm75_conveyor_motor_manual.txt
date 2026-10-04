@@ -1,0 +1,22 @@
+FICTIONAL SAMPLE MANUAL - FOR DEMONSTRATION ONLY
+DriveMax CM-75 Conveyor Drive Motor - Maintenance and Troubleshooting Guide
+This document was written for the MaintainIQ demo. DriveMax and the CM-75 are fictional. Values are illustrative and are not certified operating limits.
+
+Section 1. Safety
+Stop the conveyor, isolate the motor at the local isolator and the motor control centre, and apply lockout/tagout before inspection. Verify that the conveyor belt cannot move under gravity or stored tension. Never defeat the emergency pull-cord, belt guards or motor overload relays. Electrical testing must be performed by a qualified electrician.
+
+Section 2. Normal Operating Conditions (illustrative)
+The CM-75 frame temperature normally runs between 45 and 75 degrees C at full load. Bearing vibration velocity is normally below 3 mm/s. Motor current should not exceed the nameplate full-load current. Bearings are re-lubricated every 2,000 operating hours and the motor is serviced every 5,000 operating hours.
+
+Section 3. Overheating and Overload Trips
+High motor temperature combined with overload relay trips usually indicates excessive mechanical load. Check for material build-up under the belt, seized idlers, a jammed conveyor, or excessive belt tension. Compare measured motor current with the nameplate value. Also confirm that the motor cooling fan and cooling fins are clean, since blocked cooling air raises winding temperature.
+Repeated trips without mechanical overload may be electrical: check supply voltage balance between phases, loose terminal connections, and the overload relay setting. A voltage imbalance of a few percent can cause a much larger current imbalance and heating.
+
+Section 4. Vibration and Bearing Noise
+A rising vibration trend with a grinding or rumbling noise indicates motor bearing wear or lubrication failure. Check grease condition and bearing temperature. Vibration at the motor-to-gearbox coupling often indicates misalignment or a worn coupling insert; check alignment and the coupling element.
+
+Section 5. Burning Smell
+A burning or hot varnish smell indicates overheating windings or insulation breakdown. Stop the motor, isolate it, and have the insulation resistance tested before returning it to service. Do not restart a motor that smells of burning insulation.
+
+Section 6. Speed Loss and Belt Slip
+If the motor runs at normal speed but the conveyor moves slowly, inspect the drive belt or chain for slip, wear and correct tension, and check the drive pulley lagging for wear.

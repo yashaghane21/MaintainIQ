@@ -1,0 +1,41 @@
+# Render Blueprint for the MaintainIQ API.
+# Secrets (MONGODB_URI, GEMINI_API_KEY) are declared with sync:false and must be set in the Render dashboard.
+services:
+  - type: web
+    name: maintainiq-api
+    runtime: python
+    rootDir: backend
+    plan: free
+    buildCommand: pip install -r requirements-lite.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.12.7
+      - key: APP_ENV
+        value: production
+      - key: DB_BACKEND
+        value: mongo
+      - key: MONGODB_URI
+        sync: false
+      - key: MONGODB_DB
+        value: maintainiq
+      - key: CORS_ORIGINS
+        sync: false            # e.g. https://maintainiq.vercel.app
+      - key: AI_PROVIDER
+        value: demo            # switch to "gemini" once GEMINI_API_KEY is set
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: GEMINI_MODEL
+        value: gemini-2.5-flash
+      # The free plan has 512 MB RAM, which is not enough for torch + Sentence Transformers.
+      # On a paid plan (>= 2 GB) use: buildCommand "pip install -r requirements.txt" and
+      # EMBEDDING_PROVIDER=sentence-transformers.
+      - key: EMBEDDING_PROVIDER
+        value: hashing
+      - key: CHROMA_PERSIST_DIR
+        value: /tmp/chroma     # ephemeral; vectors are rebuilt from MongoDB on startup
+      - key: SEED_ON_STARTUP
+        value: "true"
+      - key: REINDEX_ON_STARTUP
+        value: "true"

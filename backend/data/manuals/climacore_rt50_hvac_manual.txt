@@ -1,0 +1,22 @@
+FICTIONAL SAMPLE MANUAL - FOR DEMONSTRATION ONLY
+ClimaCore RT-50 Rooftop HVAC Unit - Service and Troubleshooting Guide
+This document was written for the MaintainIQ demo. ClimaCore and the RT-50 are fictional. Values are illustrative and are not certified operating limits.
+
+Section 1. Safety
+Isolate electrical power at the unit disconnect and apply lockout/tagout before opening service panels. Refrigerant work must only be carried out by a certified refrigeration technician. Never bypass the high-pressure cut-out switch or the condenser fan safety relay. Use fall protection when working on rooftop units.
+
+Section 2. Normal Operating Conditions (illustrative)
+Supply air temperature in cooling mode is normally 12 to 18 degrees C. Refrigerant high-side pressure in the demo configuration is normally 15 to 22 bar depending on ambient temperature. Fan and compressor vibration is normally below 3 mm/s. Filters should be inspected monthly and the unit serviced every 3,000 operating hours.
+
+Section 3. Insufficient Cooling
+If the unit runs continuously but supply air is warm, first check the air filters. A clogged filter restricts airflow, reduces heat transfer across the evaporator coil, and can lead to coil icing. Replace filters and check the return air path for obstructions.
+If filters are clean and supply air remains warm, low refrigerant charge caused by a refrigerant leak is a common cause. Signs include low suction pressure, ice on the suction line, and oily residue at brazed joints. Leak testing and recharging must be done by a certified technician.
+
+Section 4. High Head Pressure and Trips
+Repeated high-pressure trips usually indicate poor heat rejection at the condenser. Check that the condenser fan starts with the compressor, that the condenser coil is not fouled by dirt, leaves or cottonwood, and that discharge air is not recirculating. Clean the condenser coil with low-pressure water from the inside out. Do not reset the high-pressure switch repeatedly without finding the cause.
+
+Section 5. Noise and Vibration
+A squealing noise at start-up is often a worn or loose fan belt. Inspect belt tension and wear, and check pulley alignment. A continuous grinding or rumbling noise from the supply fan suggests fan bearing wear. Excessive compressor vibration can indicate loose mounting bolts or failed isolation mounts.
+
+Section 6. Short Cycling
+If the compressor starts and stops every few minutes, check the thermostat or controller set-points, the location of the return air sensor, and the controller alarm log. Short cycling can also be caused by an oversized unit or a refrigerant charge problem.

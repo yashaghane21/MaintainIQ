@@ -1,0 +1,26 @@
+FICTIONAL SAMPLE MANUAL - FOR DEMONSTRATION ONLY
+AquaFlow CP-200 Centrifugal Water Pump - Maintenance and Troubleshooting Guide
+This document was written for the MaintainIQ demo. AquaFlow and the CP-200 are fictional. The values below are illustrative and are not certified operating limits.
+
+Section 1. Safety and Isolation
+Before any hands-on inspection, apply lockout/tagout to the pump motor supply, close the suction and discharge isolation valves, and relieve trapped pressure through the casing drain. Confirm zero energy by attempting a local start. Never bypass the low-suction-pressure interlock or the motor overload protection. Allow the casing and bearing housings to cool before touching them.
+
+Section 2. Normal Operating Conditions (illustrative)
+The CP-200 bearing housing typically runs between 40 and 70 degrees C. Discharge pressure in the demo installation is normally 4 to 7 bar. Overall vibration velocity is normally below 4 mm/s RMS measured on the drive-end bearing housing. A routine service is scheduled every 4,000 operating hours.
+
+Section 3. Vibration and Noise Troubleshooting
+Rising vibration with a rumbling or grinding noise from the bearing housing commonly indicates bearing wear or lubrication breakdown. Check grease condition, look for discoloured or contaminated lubricant, and compare the drive-end and non-drive-end housing temperatures. A difference of more than 15 degrees C between the housings suggests a localized bearing problem.
+Vibration that appears shortly after the motor or pump has been removed and reinstalled is frequently caused by shaft misalignment or a loose coupling. Check coupling bolt torque and verify alignment with a dial indicator or laser alignment tool with the pump isolated. Soft foot under the motor feet can also cause alignment to drift.
+A crackling noise that sounds like gravel passing through the pump, often with fluctuating discharge pressure and reduced flow, is typical of cavitation. Cavitation is commonly caused by a blocked suction strainer, a partially closed suction valve, or low suction tank level. Inspect and clean the suction strainer and confirm the suction valve is fully open.
+
+Section 4. Overheating
+High bearing housing temperature can result from over-greasing, under-greasing, contaminated lubricant, or running the pump against a closed discharge valve (dead-heading). Dead-heading also raises casing temperature rapidly and can damage the mechanical seal. Verify discharge valve position and the minimum flow recirculation line before restarting.
+
+Section 5. Pressure Abnormalities
+Discharge pressure significantly above normal suggests a downstream restriction such as a partially closed valve, a stuck check valve, or a blocked line. Discharge pressure below normal with high motor current may indicate internal wear of the impeller or wear rings. Always confirm the pressure gauge or transmitter calibration before acting on a single pressure reading.
+
+Section 6. Mechanical Seal Leakage
+A small amount of weeping at the mechanical seal can be normal during start-up. Continuous dripping or a visible stream indicates seal face wear, a damaged O-ring, or dry running. Replace the seal as a cartridge assembly. Do not overtighten the gland in an attempt to stop leakage.
+
+Section 7. Lubrication
+Re-grease the CP-200 bearings every 1,000 operating hours with the specified lithium-complex grease, adding a small quantity while the pump is running at low speed where safe to do so. Over-greasing causes churning and elevated temperature. Record each lubrication in the maintenance log.

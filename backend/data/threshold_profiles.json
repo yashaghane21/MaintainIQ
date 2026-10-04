@@ -1,0 +1,31 @@
+{
+  "disclaimer": "FICTIONAL DEMONSTRATION VALUES. These thresholds are illustrative only and are NOT certified, manufacturer-approved, or standards-based operating limits. Always consult the actual equipment documentation and qualified personnel.",
+  "profiles": {
+    "pump": {
+      "label": "Industrial water pump (fictional demo profile)",
+      "sensors": {
+        "temperature": {"canonical_unit": "C", "warning": 75, "critical": 90, "plausible_min": -40, "plausible_max": 250, "description": "Bearing housing temperature"},
+        "pressure": {"canonical_unit": "bar", "warning": 8, "critical": 10, "plausible_min": 0, "plausible_max": 100, "description": "Discharge pressure"},
+        "vibration": {"canonical_unit": "mm/s", "warning": 5, "critical": 8, "plausible_min": 0, "plausible_max": 100, "description": "Overall vibration velocity (RMS)"},
+        "operating_hours": {"canonical_unit": "h", "warning": 4000, "critical": 6000, "plausible_min": 0, "plausible_max": 200000, "description": "Operating hours since last service"}
+      }
+    },
+    "hvac": {
+      "label": "Commercial HVAC unit (fictional demo profile)",
+      "sensors": {
+        "temperature": {"canonical_unit": "C", "warning": 35, "critical": 45, "plausible_min": -40, "plausible_max": 150, "description": "Supply air / cabinet temperature"},
+        "pressure": {"canonical_unit": "bar", "warning": 25, "critical": 30, "plausible_min": 0, "plausible_max": 60, "description": "Refrigerant high-side pressure"},
+        "vibration": {"canonical_unit": "mm/s", "warning": 4.5, "critical": 7.1, "plausible_min": 0, "plausible_max": 100, "description": "Fan / compressor vibration velocity"},
+        "operating_hours": {"canonical_unit": "h", "warning": 3000, "critical": 5000, "plausible_min": 0, "plausible_max": 200000, "description": "Operating hours since last service"}
+      }
+    },
+    "conveyor_motor": {
+      "label": "Conveyor drive motor (fictional demo profile)",
+      "sensors": {
+        "temperature": {"canonical_unit": "C", "warning": 80, "critical": 100, "plausible_min": -40, "plausible_max": 250, "description": "Motor frame / winding temperature"},
+        "vibration": {"canonical_unit": "mm/s", "warning": 4.5, "critical": 7.1, "plausible_min": 0, "plausible_max": 100, "description": "Motor bearing vibration velocity"},
+        "operating_hours": {"canonical_unit": "h", "warning": 5000, "critical": 8000, "plausible_min": 0, "plausible_max": 200000, "description": "Operating hours since last service"}
+      }
+    }
+  }
+}
