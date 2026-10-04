@@ -156,11 +156,10 @@ maintainiq/
 │   ├── data/
 │   │   ├── threshold_profiles.json # FICTIONAL demo thresholds
 │   │   └── manuals/                # FICTIONAL sample manuals
-│   ├── api/index.py                # Vercel serverless entry point (imports app.main:app)
 │   ├── requirements.txt            # flat core deps (~70 MB) - installed by Vercel/Render
 │   ├── requirements-ml.txt         # + ChromaDB, CPU torch, Sentence Transformers (semantic retrieval)
 │   ├── requirements-dev.txt        # + pytest, httpx, mongomock
-│   ├── vercel.json, .vercelignore  # backend deployment on Vercel
+│   ├── vercel.json, .vercelignore  # backend on Vercel (FastAPI auto-detected at app/main.py)
 │   ├── render.yaml                 # alternative: Render blueprint
 │   └── .env.example
 ├── frontend/
@@ -304,7 +303,7 @@ cd backend && python -m pytest
 cd frontend && npm test
 ```
 
-Tests that use retrieval are parametrised over both vector stores, so they run twice (111 backend tests in total).
+Tests that use retrieval are parametrised over both vector stores, so they run twice (109 backend tests in total).
 
 | Suite | Count | Covers |
 |---|---|---|
@@ -363,7 +362,7 @@ Create **two Vercel projects** from the same GitHub repository: one for the API 
 ### 2. Backend on Vercel (serverless Python)
 
 1. **New Project** → import the repo → **Root Directory: `backend`**. Leave the framework preset as *Other*.
-2. Vercel installs `backend/requirements.txt` (flat, ~70 MB) and serves `api/index.py`. `vercel.json` rewrites every path to that function as `/api/index?__path=/<path>`, and `api/index.py` restores the original path before FastAPI routes it. Requests may take up to 60 s.
+2. Vercel detects FastAPI automatically: it installs `backend/requirements.txt` (flat, ~70 MB) and serves the `app` object from `app/main.py` for **all** paths. `vercel.json` deliberately contains **no rewrites**: a rewrite to a single function path makes FastAPI see that path instead of the original URL, so every route returns 404.
 3. Environment variables:
 
    | Variable | Value |

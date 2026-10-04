@@ -77,17 +77,7 @@ def register_exception_handlers(app: FastAPI) -> None:
         # received path is echoed, which makes proxy/rewrite misconfiguration easy to diagnose.
         details = None
         if exc.status_code == 404:
-            headers = {k.lower(): v for k, v in request.headers.items()}
-            details = {
-                "path": request.scope.get("path"),
-                "root_path": request.scope.get("root_path", ""),
-                # Set by the Vercel entry wrapper (api/index.py) when it ran.
-                "routing": (request.scope.get("state") or {}).get("vercel_routing"),
-                # Routing-related header names only (values for the two non-sensitive Vercel ones).
-                "routing_headers": sorted(h for h in headers if h.startswith(("x-now", "x-matched", "x-forwarded-uri", "x-original", "x-vercel-forwarded"))),
-                "x_matched_path": headers.get("x-matched-path"),
-                "x_now_route_matches": headers.get("x-now-route-matches"),
-            }
+            details = {"path": request.scope.get("path"), "root_path": request.scope.get("root_path", "")}
         code = {404: "not_found", 405: "method_not_allowed"}.get(exc.status_code, "http_error")
         message = "No route matches this URL" if exc.status_code == 404 else str(exc.detail)
         return JSONResponse(status_code=exc.status_code, content=_error_body(code, message, details),

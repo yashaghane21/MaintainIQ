@@ -135,3 +135,9 @@ def test_equipment_crud_and_history(seeded):
     seeded.post("/api/issues", json=issue_payload())
     history = seeded.get("/api/equipment/PUMP-001/history").json()
     assert len(history["issues"]) == 1 and history["timeline"]
+
+
+def test_unknown_route_reports_received_path(client):
+    """404s use the standard error shape and echo the received path (helps diagnose proxy rewrites)."""
+    body = client.get("/nope/here").json()["error"]
+    assert body["code"] == "not_found" and body["details"]["path"] == "/nope/here"
