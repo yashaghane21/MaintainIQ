@@ -49,3 +49,18 @@ def test_runtime_root_path_does_not_break_routing(client):
 def test_unknown_route_reports_received_path(client):
     body = client.get("/nope/here").json()["error"]
     assert body["code"] == "not_found" and body["details"]["path"] == "/nope/here"
+
+
+def test_path_recovered_from_vercel_route_matches_header(client):
+    """Fallback when the rewrite's query string does not reach the function."""
+    from api.index import app
+
+    resp = TestClient(app).get("/api/index", headers={"x-now-route-matches": "1=api%2Fhealth"})
+    assert resp.status_code == 200 and resp.json()["database"]["status"] == "ok"
+
+
+def test_entry_module_exposes_only_the_wrapper():
+    import api.index as entry
+    from fastapi import FastAPI
+
+    assert not any(isinstance(v, FastAPI) for v in vars(entry).values())
