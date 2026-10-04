@@ -98,9 +98,15 @@ A fresh virtualenv with **only** `requirements.txt` (no ChromaDB, torch or mongo
 - A PDF upload returned `ingestion_status: completed` in the same response.
 - The full Playwright workflow passed with no console errors. The analysis cited 4 manual excerpts using hashing retrieval.
 
+### Live Gemini
+
+After the user supplied an API key (stored only in the git-ignored `backend/.env`), the agent:
+- made a minimal `generate_content` call through the app's client (`gemini-2.5-flash` answered);
+- ran the full triage pipeline with live Gemini on the PUMP-004 cavitation scenario, against a throwaway in-memory database so the user's Atlas data was not modified. Result: `is_simulated=False`, schema valid on the first attempt (no repair), about 17 s. Causes were cavitation / blocked suction strainer / partially closed suction valve, all citing real evidence IDs, with 0 guardrail warnings. The lockout/tagout step was first and cited the manual's safety section. The draft work order was created as `pending_review`.
+
 ## Not verified
 
-- **No real Gemini API call was made** (no key available). The live provider is covered only by mocked-client unit tests.
+- Gemini was exercised on one scenario only; there is no systematic evaluation of answer quality, and the hosted Vercel deployment has not been run with `AI_PROVIDER=gemini`.
 - **No hosted deployment** to Vercel, Render or Atlas was performed. The configs were written but not exercised.
 - **No deployment to Vercel's hosted infrastructure was verified.** Serverless mode was simulated locally with `VERCEL=1` and uvicorn, not Vercel's runtime.
 - Vercel and Render run Python 3.12 by default; the code was only executed on Python 3.14.6.

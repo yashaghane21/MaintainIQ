@@ -391,7 +391,7 @@ Create **two Vercel projects** from the same GitHub repository: one for the API 
 ## Limitations
 
 - **No authentication.** Reviewer identity is a free-text demo name (Settings page) recorded in the audit log. A real deployment needs SSO/RBAC so that only authorised technicians can approve.
-- **Live Gemini path not verified against the real API.** The Gemini provider is covered by unit tests with a mocked client, and the "no key configured" failure path was verified live. No real Gemini call was made during development because no API key was available.
+- **Gemini verified live, on a single scenario.** A full triage run with `gemini-2.5-flash` passed schema validation on the first attempt, with no fabricated citations removed. That is one scenario, not an evaluation of diagnostic quality across many cases. Model behaviour can change between model versions.
 - **Demo provider is keyword-based.** It shows the workflow and contracts, not diagnostic quality.
 - **Fictional data.** Thresholds and manuals are illustrative and must not be used on real equipment.
 - **Serverless retrieval is lexical.** On Vercel (no ChromaDB/torch) retrieval uses hashing embeddings, which match shared words rather than meaning. The in-memory index is rebuilt per instance, which only suits small corpora.

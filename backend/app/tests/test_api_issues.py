@@ -141,3 +141,10 @@ def test_unknown_route_reports_received_path(client):
     """404s use the standard error shape and echo the received path (helps diagnose proxy rewrites)."""
     body = client.get("/nope/here").json()["error"]
     assert body["code"] == "not_found" and body["details"]["path"] == "/nope/here"
+
+
+def test_cors_origins_tolerate_trailing_slash_and_spaces():
+    from app.core.config import Settings
+
+    s = Settings(cors_origins=" https://front.vercel.app/ , http://localhost:5173,, ")
+    assert s.cors_origin_list == ["https://front.vercel.app", "http://localhost:5173"]
